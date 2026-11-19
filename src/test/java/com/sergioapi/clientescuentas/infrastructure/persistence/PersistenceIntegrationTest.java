@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @DataJpaTest
 @Import({ClientePersistenceAdapter.class, CuentaBancariaPersistenceAdapter.class})
@@ -136,5 +137,12 @@ class PersistenceIntegrationTest {
         assertThat(cuentaRepository.findById(cuenta.id())).contains(actualizada);
         assertThat(cuentaRepository.findByDniClienteIn(List.of(cliente.dni())))
                 .containsExactly(actualizada);
+    }
+
+    @Test
+    void shouldRejectOffsetOutsideJpaRange() {
+        assertThatThrownBy(() ->
+                clienteRepository.findAll(21474837, 100))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

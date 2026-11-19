@@ -73,6 +73,12 @@ public class ClientePersistenceAdapter implements ClienteRepository {
     }
 
     private static PageRequest pageRequest(int page, int size) {
+        if ((long) page * size > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "El desplazamiento de paginación supera el límite permitido"
+            );
+        }
+
         return PageRequest.of(page, size, Sort.by("dni").ascending());
     }
 

@@ -178,7 +178,9 @@ components:
       name: page
       in: query
       required: false
-      description: Índice de página, comenzando en cero.
+      description: >-
+        Índice de página, comenzando en cero.
+        El producto de page y size no puede superar 2147483647.
       schema:
         type: integer
         format: int32
@@ -224,6 +226,7 @@ components:
       description: >-
         Tipo de cuenta no vacío ni compuesto únicamente por espacios.
         Se eliminan los espacios exteriores y se normaliza a mayúsculas.
+        El valor resultante tras la normalización no puede superar los 50 caracteres.
       example: NORMAL
 
     Cliente:

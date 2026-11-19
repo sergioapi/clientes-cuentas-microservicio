@@ -71,4 +71,13 @@ class CuentaBancariaTest {
         assertThatThrownBy(() -> CuentaBancaria.crear("INVALID", "NORMAL", BigDecimal.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void shouldRejectTipoCuentaExceedingLimitAfterNormalization() {
+        assertThatThrownBy(() ->
+                CuentaBancaria.crear(
+                        DNI, "ß".repeat(50), BigDecimal.ZERO
+                ))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
