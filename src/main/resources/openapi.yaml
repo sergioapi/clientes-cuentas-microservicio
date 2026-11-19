@@ -1,0 +1,382 @@
+openapi: 3.0.3
+
+info:
+  title: API de gestión de clientes y cuentas bancarias
+  description: API REST para consultar clientes y gestionar sus cuentas bancarias.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Entorno local
+
+tags:
+  - name: Clientes
+    description: Operaciones de consulta de clientes.
+  - name: Cuentas
+    description: Operaciones de gestión de cuentas bancarias.
+
+paths:
+  /clientes:
+    get:
+      tags:
+        - Clientes
+      operationId: getClientes
+      summary: Obtener clientes con sus cuentas bancarias
+      description: >-
+        Devuelve una lista paginada de clientes con sus datos personales
+        y todas sus cuentas bancarias asociadas, ordenada por DNI ascendente.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          $ref: '#/components/responses/ClientesConCuentasResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /clientes/mayores-de-edad:
+    get:
+      tags:
+        - Clientes
+      operationId: getClientesMayoresDeEdad
+      summary: Obtener clientes mayores de edad
+      description: >-
+        Devuelve una lista paginada de clientes con una edad igual o superior
+        a 18 años en la fecha de consulta, sin incluir sus cuentas bancarias.
+        Los clientes sin fecha de nacimiento conocida quedan excluidos.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          $ref: '#/components/responses/ClientesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /clientes/con-cuenta-superior-a/{cantidad}:
+    get:
+      tags:
+        - Clientes
+      operationId: getClientesConCuentaSuperiorA
+      summary: Obtener clientes por saldo acumulado
+      description: >-
+        Devuelve una lista paginada de clientes cuya suma de saldos de todas
+        sus cuentas bancarias es estrictamente superior a la cantidad indicada,
+        sin incluir las cuentas en la respuesta.
+      parameters:
+        - name: cantidad
+          in: path
+          required: true
+          description: Umbral monetario de saldo acumulado.
+          schema:
+            type: number
+          example: 50000.00
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          $ref: '#/components/responses/ClientesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /clientes/{dni}:
+    get:
+      tags:
+        - Clientes
+      operationId: getClienteByDni
+      summary: Obtener un cliente por DNI
+      description: Devuelve los datos personales del cliente y todas sus cuentas bancarias.
+      parameters:
+        - name: dni
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Dni'
+      responses:
+        '200':
+          description: Cliente encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClienteConCuentas'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cuentas:
+    post:
+      tags:
+        - Cuentas
+      operationId: createCuenta
+      summary: Crear una cuenta bancaria
+      description: >-
+        Crea una cuenta bancaria asociada al cliente indicado. Si el cliente
+        no existe, se crea automáticamente con su DNI y el resto de sus
+        datos personales sin informar.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCuentaRequest'
+            example:
+              dniCliente: '11111111A'
+              tipoCuenta: NORMAL
+              total: 50000.00
+      responses:
+        '201':
+          description: Cuenta bancaria creada correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CuentaBancaria'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /cuentas/{idCuenta}:
+    put:
+      tags:
+        - Cuentas
+      operationId: updateCuentaSaldo
+      summary: Actualizar el saldo de una cuenta bancaria
+      description: Sustituye el saldo actual por el nuevo importe indicado.
+      parameters:
+        - name: idCuenta
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSaldoRequest'
+            example:
+              total: 180000.00
+      responses:
+        '200':
+          description: Cuenta bancaria actualizada correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CuentaBancaria'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Índice de página, comenzando en cero.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 0
+
+    Size:
+      name: size
+      in: query
+      required: false
+      description: Número máximo de clientes por página.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    Dni:
+      type: string
+      pattern: '^[0-9]{8}[A-Z]$'
+      description: DNI de ocho dígitos y una letra mayúscula, sin validar la letra de control.
+      example: '11111111A'
+
+    Importe:
+      type: number
+      minimum: -100000000000000000
+      exclusiveMinimum: true
+      maximum: 100000000000000000
+      exclusiveMaximum: true
+      multipleOf: 0.01
+      description: >-
+        Importe monetario de hasta 17 dígitos enteros y 2 decimales.
+        Se admiten valores negativos, cero y positivos.
+      example: 150000.00
+
+    TipoCuenta:
+      type: string
+      minLength: 1
+      maxLength: 50
+      pattern: '\S'
+      description: >-
+        Tipo de cuenta no vacío ni compuesto únicamente por espacios.
+        Se eliminan los espacios exteriores y se normaliza a mayúsculas.
+      example: NORMAL
+
+    Cliente:
+      type: object
+      required:
+        - dni
+        - nombre
+        - apellido1
+        - apellido2
+        - fechaNacimiento
+      properties:
+        dni:
+          $ref: '#/components/schemas/Dni'
+        nombre:
+          type: string
+          nullable: true
+          example: Juan
+        apellido1:
+          type: string
+          nullable: true
+          example: Pérez
+        apellido2:
+          type: string
+          nullable: true
+          example: López
+        fechaNacimiento:
+          type: string
+          format: date
+          nullable: true
+          example: '1959-09-12'
+
+    ClienteConCuentas:
+      allOf:
+        - $ref: '#/components/schemas/Cliente'
+        - type: object
+          required:
+            - cuentas
+          properties:
+            cuentas:
+              type: array
+              description: Cuentas bancarias asociadas al cliente. Lista vacía si no tiene cuentas.
+              items:
+                $ref: '#/components/schemas/CuentaBancaria'
+
+    CuentaBancaria:
+      type: object
+      required:
+        - id
+        - dniCliente
+        - tipoCuenta
+        - total
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 1
+        dniCliente:
+          $ref: '#/components/schemas/Dni'
+        tipoCuenta:
+          $ref: '#/components/schemas/TipoCuenta'
+        total:
+          $ref: '#/components/schemas/Importe'
+
+    CreateCuentaRequest:
+      type: object
+      required:
+        - dniCliente
+        - tipoCuenta
+        - total
+      properties:
+        dniCliente:
+          $ref: '#/components/schemas/Dni'
+        tipoCuenta:
+          $ref: '#/components/schemas/TipoCuenta'
+        total:
+          $ref: '#/components/schemas/Importe'
+
+    UpdateSaldoRequest:
+      type: object
+      required:
+        - total
+      properties:
+        total:
+          $ref: '#/components/schemas/Importe'
+
+    ProblemDetail:
+      type: object
+      required:
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          example: 'about:blank'
+        title:
+          type: string
+          example: Not Found
+        status:
+          type: integer
+          format: int32
+          example: 404
+        detail:
+          type: string
+          example: No existe el cliente con el DNI indicado.
+        instance:
+          type: string
+          format: uri-reference
+          example: /clientes/99999999A
+
+  responses:
+    ClientesResponse:
+      description: >-
+        Lista paginada de clientes sin sus cuentas bancarias, ordenada por
+        DNI ascendente. Devuelve una lista vacía si no existen resultados
+        para la página solicitada.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Cliente'
+
+    ClientesConCuentasResponse:
+      description: >-
+        Lista paginada de clientes con todas sus cuentas bancarias, ordenada
+        por DNI ascendente. Devuelve una lista vacía si no existen resultados
+        para la página solicitada.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ClienteConCuentas'
+
+    BadRequest:
+      description: Parámetros o datos de entrada inválidos.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+    NotFound:
+      description: El recurso solicitado no existe.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+    Conflict:
+      description: Conflicto de integridad que impide completar la operación.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
