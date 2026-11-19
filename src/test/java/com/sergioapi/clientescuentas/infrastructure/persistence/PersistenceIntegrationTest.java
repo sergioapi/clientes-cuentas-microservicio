@@ -85,12 +85,32 @@ class PersistenceIntegrationTest {
 
     @Test
     void shouldFindClienteWithItsAccountsByDni() {
-        assertThat(clienteRepository.findByDni("11111111A"))
-                .hasValueSatisfying(cliente -> assertThat(cliente.nombre()).isEqualTo("Juan"));
-        assertThat(clienteRepository.findByDni("99999999A")).isEmpty();
-        assertThat(cuentaRepository.findByDniClienteIn(List.of("11111111A")))
-                .hasSize(2)
-                .allSatisfy(cuenta -> assertThat(cuenta.dniCliente()).isEqualTo("11111111A"));
+        assertThat(clienteRepository.findByDniWithCuentas("11111111A"))
+                .hasValueSatisfying(resultado -> {
+                    assertThat(resultado.cliente().dni())
+                            .isEqualTo("11111111A");
+
+                    assertThat(resultado.cuentas())
+                            .extracting(CuentaBancaria::id)
+                            .containsExactly(1L, 2L);
+                });
+
+        assertThat(clienteRepository.findByDniWithCuentas("99999999A"))
+                .isEmpty();
+    }
+
+    @Test
+    void shouldFindClienteWithoutAccounts() {
+        Cliente cliente = Cliente.crearConDni("66666666F");
+
+        clienteRepository.insert(cliente);
+        entityManager.clear();
+
+        assertThat(clienteRepository.findByDniWithCuentas(cliente.dni()))
+                .hasValueSatisfying(resultado -> {
+                    assertThat(resultado.cliente()).isEqualTo(cliente);
+                    assertThat(resultado.cuentas()).isEmpty();
+                });
     }
 
     @Test

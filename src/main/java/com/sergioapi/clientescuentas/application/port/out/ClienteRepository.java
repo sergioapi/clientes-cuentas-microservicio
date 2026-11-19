@@ -1,5 +1,6 @@
 package com.sergioapi.clientescuentas.application.port.out;
 
+import com.sergioapi.clientescuentas.application.model.ClienteConCuentas;
 import com.sergioapi.clientescuentas.domain.model.Cliente;
 
 import java.math.BigDecimal;
@@ -16,6 +17,8 @@ public interface ClienteRepository {
     List<Cliente> findBySaldoTotalSuperiorA(BigDecimal cantidad, int page, int size);
 
     Optional<Cliente> findByDni(String dni);
+
+    Optional<ClienteConCuentas> findByDniWithCuentas(String dni);
 
     void insert(Cliente cliente);
 }

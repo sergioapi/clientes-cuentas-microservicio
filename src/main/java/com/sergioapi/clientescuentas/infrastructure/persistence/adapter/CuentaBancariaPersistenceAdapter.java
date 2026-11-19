@@ -41,7 +41,7 @@ public class CuentaBancariaPersistenceAdapter implements CuentaBancariaRepositor
         return toDomain(repository.save(entity));
     }
 
-    private static CuentaBancaria toDomain(CuentaBancariaJpaEntity entity) {
+    static CuentaBancaria toDomain(CuentaBancariaJpaEntity entity) {
         return new CuentaBancaria(
                 entity.getId(), entity.getDniCliente(), entity.getTipoCuenta(), entity.getTotal()
         );

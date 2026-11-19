@@ -1,11 +1,6 @@
 package com.sergioapi.clientescuentas.infrastructure.persistence.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,7 +12,6 @@ import java.math.BigDecimal;
 @Table(name = "cuentas_bancarias")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
 public class CuentaBancariaJpaEntity {
 
     @Id
@@ -33,4 +27,25 @@ public class CuentaBancariaJpaEntity {
 
     @Column(name = "total", precision = 19, scale = 2, nullable = false)
     private BigDecimal total;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "dni_cliente",
+            referencedColumnName = "dni",
+            insertable = false,
+            updatable = false
+    )
+    private ClienteJpaEntity cliente;
+
+    public CuentaBancariaJpaEntity(
+            Long id,
+            String dniCliente,
+            String tipoCuenta,
+            BigDecimal total
+    ) {
+        this.id = id;
+        this.dniCliente = dniCliente;
+        this.tipoCuenta = tipoCuenta;
+        this.total = total;
+    }
 }

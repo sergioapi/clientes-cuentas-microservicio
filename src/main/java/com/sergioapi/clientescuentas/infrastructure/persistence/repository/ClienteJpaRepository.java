@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface ClienteJpaRepository extends JpaRepository<ClienteJpaEntity, String> {
 
@@ -28,5 +29,14 @@ public interface ClienteJpaRepository extends JpaRepository<ClienteJpaEntity, St
             """)
     List<ClienteJpaEntity> findBySaldoTotalSuperiorA(
             @Param("cantidad") BigDecimal cantidad, Pageable pageable
+    );
+
+    @Query("""
+            SELECT c FROM ClienteJpaEntity c
+            LEFT JOIN FETCH c.cuentas
+            WHERE c.dni = :dni
+            """)
+    Optional<ClienteJpaEntity> findByDniWithCuentas(
+            @Param("dni") String dni
     );
 }

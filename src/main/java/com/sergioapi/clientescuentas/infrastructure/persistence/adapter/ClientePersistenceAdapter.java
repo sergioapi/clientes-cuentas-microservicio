@@ -1,5 +1,6 @@
 package com.sergioapi.clientescuentas.infrastructure.persistence.adapter;
 
+import com.sergioapi.clientescuentas.application.model.ClienteConCuentas;
 import com.sergioapi.clientescuentas.application.port.out.ClienteRepository;
 import com.sergioapi.clientescuentas.domain.model.Cliente;
 import com.sergioapi.clientescuentas.infrastructure.persistence.entity.ClienteJpaEntity;
@@ -52,8 +53,18 @@ public class ClientePersistenceAdapter implements ClienteRepository {
     }
 
     @Override
+    public Optional<ClienteConCuentas> findByDniWithCuentas(String dni) {
+        return repository.findByDniWithCuentas(dni)
+                .map(entity -> new ClienteConCuentas(
+                        toDomain(entity),
+                        entity.getCuentas().stream()
+                                .map(CuentaBancariaPersistenceAdapter::toDomain)
+                                .toList()
+                ));
+    }
+
+    @Override
     public void insert(Cliente cliente) {
-        // El DNI se asigna en el dominio. Persist fuerza una inserción, no un merge.
         entityManager.persist(new ClienteJpaEntity(
                 cliente.dni(), cliente.nombre(), cliente.apellido1(),
                 cliente.apellido2(), cliente.fechaNacimiento()
