@@ -1,5 +1,6 @@
 package com.sergioapi.clientescuentas.application.service;
 
+import com.sergioapi.clientescuentas.application.exception.ClienteDniDuplicadoException;
 import com.sergioapi.clientescuentas.application.exception.CuentaNotFoundException;
 import com.sergioapi.clientescuentas.application.port.in.CuentaBancariaUseCase;
 import com.sergioapi.clientescuentas.application.port.out.ClienteRepository;
@@ -24,6 +25,16 @@ public class CuentaBancariaService implements CuentaBancariaUseCase {
                 dniCliente, tipoCuenta, total
         );
 
+        try {
+            return crearCuentaEnTransaccion(dniCliente, cuenta);
+        } catch (ClienteDniDuplicadoException ex) {
+            return crearCuentaEnTransaccion(dniCliente, cuenta);
+        }
+    }
+
+    private CuentaBancaria crearCuentaEnTransaccion(
+            String dniCliente, CuentaBancaria cuenta
+    ) {
         return transactionPort.execute(() -> {
             if (clienteRepository.findByDni(dniCliente).isEmpty()) {
                 clienteRepository.insert(Cliente.crearConDni(dniCliente));

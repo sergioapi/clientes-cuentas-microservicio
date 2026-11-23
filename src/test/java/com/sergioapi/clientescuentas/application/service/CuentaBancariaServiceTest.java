@@ -1,5 +1,6 @@
 package com.sergioapi.clientescuentas.application.service;
 
+import com.sergioapi.clientescuentas.application.exception.ClienteDniDuplicadoException;
 import com.sergioapi.clientescuentas.application.exception.CuentaNotFoundException;
 import com.sergioapi.clientescuentas.application.port.out.ClienteRepository;
 import com.sergioapi.clientescuentas.application.port.out.CuentaBancariaRepository;
@@ -95,6 +96,67 @@ class CuentaBancariaServiceTest {
                 .isInstanceOf(CuentaNotFoundException.class)
                 .hasMessageContaining("99");
 
+        verify(cuentaRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRetryCreateCuentaOnceWhenClienteAlreadyCreatedConcurrently() {
+        var nueva = CuentaBancaria.crear(DNI, "NORMAL", TOTAL);
+        var guardada = new CuentaBancaria(8L, DNI, "NORMAL", TOTAL);
+        var cliente = Cliente.crearConDni(DNI);
+
+        when(clienteRepository.findByDni(DNI))
+                .thenReturn(Optional.empty(), Optional.of(cliente));
+
+        doThrow(new ClienteDniDuplicadoException(
+                DNI, new RuntimeException("DNI duplicado")
+        )).when(clienteRepository).insert(cliente);
+
+        when(cuentaRepository.save(nueva)).thenReturn(guardada);
+
+        assertThat(service.createCuenta(DNI, "NORMAL", TOTAL))
+                .isEqualTo(guardada);
+
+        verify(transactionPort, times(2)).execute(any());
+        verify(clienteRepository, times(2)).findByDni(DNI);
+        verify(clienteRepository, times(1)).insert(cliente);
+        verify(cuentaRepository, times(1)).save(nueva);
+    }
+
+    @Test
+    void shouldNotRetryCreateCuentaOnUnexpectedFailure() {
+        var cliente = Cliente.crearConDni(DNI);
+
+        when(clienteRepository.findByDni(DNI))
+                .thenReturn(Optional.empty());
+
+        doThrow(new IllegalStateException("Fallo inesperado"))
+                .when(clienteRepository).insert(cliente);
+
+        assertThatThrownBy(() -> service.createCuenta(DNI, "NORMAL", TOTAL))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Fallo inesperado");
+
+        verify(transactionPort, times(1)).execute(any());
+        verify(cuentaRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldStopRetryingAfterSecondDniConflict() {
+        var cliente = Cliente.crearConDni(DNI);
+
+        when(clienteRepository.findByDni(DNI))
+                .thenReturn(Optional.empty());
+
+        doThrow(new ClienteDniDuplicadoException(
+                DNI, new RuntimeException("DNI duplicado")
+        )).when(clienteRepository).insert(cliente);
+
+        assertThatThrownBy(() -> service.createCuenta(DNI, "NORMAL", TOTAL))
+                .isInstanceOf(ClienteDniDuplicadoException.class);
+
+        verify(transactionPort, times(2)).execute(any());
+        verify(clienteRepository, times(2)).insert(cliente);
         verify(cuentaRepository, never()).save(any());
     }
 }

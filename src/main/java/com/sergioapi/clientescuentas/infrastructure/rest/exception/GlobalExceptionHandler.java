@@ -1,6 +1,7 @@
 package com.sergioapi.clientescuentas.infrastructure.rest.exception;
 
 
+import com.sergioapi.clientescuentas.application.exception.ClienteDniDuplicadoException;
 import com.sergioapi.clientescuentas.application.exception.ClienteNotFoundException;
 import com.sergioapi.clientescuentas.application.exception.CuentaNotFoundException;
 import org.hibernate.exception.ConstraintViolationException;
@@ -39,8 +40,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         );
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ProblemDetail handleDataConflict(DataIntegrityViolationException ex) {
+    @ExceptionHandler({
+            DataIntegrityViolationException.class,
+            ClienteDniDuplicadoException.class
+    })
+    public ProblemDetail handleDataConflict(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
                 "La operación entra en conflicto con los datos existentes"

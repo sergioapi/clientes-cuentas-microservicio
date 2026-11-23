@@ -1,11 +1,13 @@
 package com.sergioapi.clientescuentas.infrastructure.persistence.adapter;
 
+import com.sergioapi.clientescuentas.application.exception.ClienteDniDuplicadoException;
 import com.sergioapi.clientescuentas.application.model.ClienteConCuentas;
 import com.sergioapi.clientescuentas.application.port.out.ClienteRepository;
 import com.sergioapi.clientescuentas.domain.model.Cliente;
 import com.sergioapi.clientescuentas.infrastructure.persistence.entity.ClienteJpaEntity;
 import com.sergioapi.clientescuentas.infrastructure.persistence.repository.ClienteJpaRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -65,11 +67,33 @@ public class ClientePersistenceAdapter implements ClienteRepository {
 
     @Override
     public void insert(Cliente cliente) {
-        entityManager.persist(new ClienteJpaEntity(
-                cliente.dni(), cliente.nombre(), cliente.apellido1(),
-                cliente.apellido2(), cliente.fechaNacimiento()
-        ));
-        entityManager.flush();
+        try {
+            entityManager.persist(new ClienteJpaEntity(
+                    cliente.dni(), cliente.nombre(), cliente.apellido1(),
+                    cliente.apellido2(), cliente.fechaNacimiento()
+            ));
+            entityManager.flush();
+
+        } catch (PersistenceException ex) {
+            if (esViolacionUnicidad(ex)) {
+                throw new ClienteDniDuplicadoException(cliente.dni(), ex);
+            }
+            throw ex;
+        }
+    }
+
+    private static boolean esViolacionUnicidad(Throwable exception) {
+        Throwable causa = exception;
+
+        while (causa != null) {
+            if (causa instanceof org.hibernate.exception.ConstraintViolationException ex
+                    && "23505".equals(ex.getSQLState())) {
+                return true;
+            }
+            causa = causa.getCause();
+        }
+
+        return false;
     }
 
     private static PageRequest pageRequest(int page, int size) {
