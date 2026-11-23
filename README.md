@@ -9,8 +9,9 @@ puede consultarse desde Swagger UI.
 
 ## Requisitos
 
-- **JDK 21** instalado y configurado (`java -version`).
-- No es necesario instalar Maven si se utiliza el **Maven Wrapper** incluido en el repositorio.
+- **Ejecución local:** JDK 21 instalado y configurado (`java -version`).
+- **Ejecución con Docker:** Docker instalado y en ejecución. No se necesita instalar Java ni Maven localmente.
+- No es necesario instalar Maven para la ejecución local si se utiliza el **Maven Wrapper** incluido en el repositorio.
 - Puerto **8080** disponible, salvo que se cambie la configuración.
 
 Tecnologías principales: Spring Boot 3, Spring Web, Spring Data JPA, H2, Flyway, Bean Validation, Lombok, Maven y JUnit
@@ -36,6 +37,37 @@ La API estará disponible en `http://localhost:8080`.
 
 Al arrancar, Flyway aplica las migraciones SQL y carga los datos iniciales: **5 clientes y 7 cuentas bancarias**. Como
 H2 funciona en memoria, los cambios realizados mediante la API se pierden cuando se detiene la aplicación.
+
+### Ejecución con Docker
+
+El proyecto incluye un Dockerfile multietapa que compila y ejecuta los tests con Java 21 mediante Maven Wrapper y genera
+una imagen de ejecución basada en Java 21 JRE.
+
+**Construir la imagen:**
+
+```bash
+docker build -t clientes-cuentas .
+```
+
+**Arrancar el contenedor:**
+
+```bash
+docker run --rm -p 8080:8080 clientes-cuentas
+```
+
+La API estará disponible en `http://localhost:8080` y Swagger UI en `http://localhost:8080/swagger-ui/index.html`.
+
+Como alternativa, para acceder también a la consola H2 desde el navegador al ejecutar la aplicación con Docker:
+
+```bash
+docker run --rm -p 127.0.0.1:8080:8080 -e SPRING_H2_CONSOLE_SETTINGS_WEB_ALLOW_OTHERS=true clientes-cuentas
+```
+
+La consola estará disponible en `http://localhost:8080/h2-console`. Esta configuración habilita el acceso remoto a la
+consola H2. Por seguridad, el puerto se publica únicamente en `127.0.0.1` y no debe exponerse a redes externas.
+
+La aplicación utiliza H2 en memoria. Al detener el contenedor se pierden los cambios realizados; al iniciarlo de nuevo,
+Flyway aplica las migraciones y carga los datos iniciales.
 
 ### Documentación interactiva y base de datos
 
@@ -150,7 +182,8 @@ Desde la raíz del proyecto:
 ```
 
 La suite incluye pruebas de dominio, servicios de aplicación, persistencia y controladores REST con MockMvc. Se
-comprueban, entre otros casos, los seis endpoints, validaciones, transacciones y paginación.
+comprueban, entre otros casos, los seis endpoints, validaciones, transacciones, recuperación ante conflictos de unicidad
+y paginación.
 
 ## Arquitectura y decisiones técnicas
 
