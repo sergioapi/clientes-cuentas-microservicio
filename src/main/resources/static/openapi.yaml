@@ -33,6 +33,8 @@ paths:
           $ref: '#/components/responses/ClientesConCuentasResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
 
   /clientes/mayores-de-edad:
     get:
@@ -52,6 +54,8 @@ paths:
           $ref: '#/components/responses/ClientesResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
 
   /clientes/con-cuenta-superior-a/{cantidad}:
     get:
@@ -78,6 +82,8 @@ paths:
           $ref: '#/components/responses/ClientesResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
 
   /clientes/{dni}:
     get:
@@ -103,6 +109,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
 
   /cuentas:
     post:
@@ -135,6 +143,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
 
   /cuentas/{idCuenta}:
     put:
@@ -171,6 +183,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
 
 components:
   parameters:
@@ -322,21 +338,16 @@ components:
         type:
           type: string
           format: uri-reference
-          example: 'about:blank'
         title:
           type: string
-          example: Not Found
         status:
           type: integer
           format: int32
-          example: 404
         detail:
           type: string
-          example: No existe el cliente con el DNI indicado.
         instance:
           type: string
           format: uri-reference
-          example: /clientes/99999999A
 
   responses:
     ClientesResponse:
@@ -383,3 +394,13 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
+
+    NotAcceptable:
+      description: >-
+        El formato solicitado en la cabecera Accept no está soportado.
+        La operación no se ejecuta.
+
+    UnsupportedMediaType:
+      description: >-
+        El cuerpo de la petición debe enviarse con
+        Content-Type application/json.

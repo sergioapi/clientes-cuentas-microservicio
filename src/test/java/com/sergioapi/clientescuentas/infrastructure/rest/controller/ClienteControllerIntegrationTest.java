@@ -1,5 +1,7 @@
 package com.sergioapi.clientescuentas.infrastructure.rest.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,12 +12,18 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.IntStream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,6 +40,12 @@ class ClienteControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
     void shouldReturnClientesWithCuentasBancarias() throws Exception {
@@ -54,6 +68,61 @@ class ClienteControllerIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].dni").value("33333333C"))
                 .andExpect(jsonPath("$[1].dni").value("44444444D"));
+    }
+
+    @Test
+    void shouldPaginateClientesWithDefaultPageSize() throws Exception {
+        List<Object[]> nuevosClientes = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> new Object[]{String.format("9%07dA", i)})
+                .toList();
+
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO clientes (dni) VALUES (?)",
+                nuevosClientes
+        );
+
+        try {
+            MvcResult primeraRespuesta = mockMvc.perform(get("/clientes"))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            MvcResult segundaRespuesta = mockMvc.perform(
+                            get("/clientes").param("page", "1"))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            JsonNode primeraPagina = objectMapper.readTree(
+                    primeraRespuesta.getResponse().getContentAsString()
+            );
+
+            JsonNode segundaPagina = objectMapper.readTree(
+                    segundaRespuesta.getResponse().getContentAsString()
+            );
+
+            assertThat(primeraPagina.size()).isEqualTo(20);
+            assertThat(segundaPagina.size()).isEqualTo(5);
+
+            List<String> dnis = new ArrayList<>();
+
+            for (JsonNode cliente : primeraPagina) {
+                dnis.add(cliente.get("dni").asText());
+            }
+
+            for (JsonNode cliente : segundaPagina) {
+                dnis.add(cliente.get("dni").asText());
+            }
+
+            assertThat(dnis)
+                    .hasSize(25)
+                    .doesNotHaveDuplicates()
+                    .isSorted();
+
+        } finally {
+            jdbcTemplate.batchUpdate(
+                    "DELETE FROM clientes WHERE dni = ?",
+                    nuevosClientes
+            );
+        }
     }
 
     @Test

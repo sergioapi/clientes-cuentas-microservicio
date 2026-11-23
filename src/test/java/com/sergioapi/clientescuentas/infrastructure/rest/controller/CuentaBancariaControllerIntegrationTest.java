@@ -112,6 +112,54 @@ class CuentaBancariaControllerIntegrationTest {
     }
 
     @Test
+    void shouldNotCreateCuentaBancariaWhenResponseTypeIsNotAcceptable() throws Exception {
+        mockMvc.perform(post("/cuentas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_PLAIN)
+                        .content("""
+                                {
+                                  "dniCliente": "66666666F",
+                                  "tipoCuenta": "NORMAL",
+                                  "total": 100.25
+                                }
+                                """))
+                .andExpect(status().isNotAcceptable());
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM clientes WHERE dni = ?",
+                Long.class, NUEVO_DNI
+        )).isZero();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM cuentas_bancarias WHERE dni_cliente = ?",
+                Long.class, NUEVO_DNI
+        )).isZero();
+    }
+
+    @Test
+    void shouldNotUpdateSaldoWhenResponseTypeIsNotAcceptable() throws Exception {
+        BigDecimal saldoAnterior = jdbcTemplate.queryForObject(
+                "SELECT total FROM cuentas_bancarias WHERE id = 1",
+                BigDecimal.class
+        );
+
+        mockMvc.perform(put("/cuentas/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_PLAIN)
+                        .content("""
+                                {"total": 200.35}
+                                """))
+                .andExpect(status().isNotAcceptable());
+
+        BigDecimal saldoPosterior = jdbcTemplate.queryForObject(
+                "SELECT total FROM cuentas_bancarias WHERE id = 1",
+                BigDecimal.class
+        );
+
+        assertThat(saldoPosterior).isEqualByComparingTo(saldoAnterior);
+    }
+
+    @Test
     void shouldReturnNotFoundForUnknownCuentaBancaria() throws Exception {
         mockMvc.perform(put("/cuentas/999")
                         .contentType(MediaType.APPLICATION_JSON)

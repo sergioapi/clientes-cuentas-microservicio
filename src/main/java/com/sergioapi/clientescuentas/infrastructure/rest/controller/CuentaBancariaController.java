@@ -9,17 +9,21 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/cuentas")
+@RequestMapping(
+        value = "/cuentas",
+        produces = MediaType.APPLICATION_JSON_VALUE
+)
 @RequiredArgsConstructor
 public class CuentaBancariaController {
 
     private final CuentaBancariaUseCase cuentaBancariaUseCase;
     private final RestMapper restMapper;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public CuentaBancariaResponse createCuenta(
             @Valid @RequestBody CreateCuentaRequest request
@@ -33,7 +37,10 @@ public class CuentaBancariaController {
         );
     }
 
-    @PutMapping("/{idCuenta}")
+    @PutMapping(
+            value = "/{idCuenta}",
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
     public CuentaBancariaResponse updateSaldo(
             @PathVariable @Positive Long idCuenta,
             @Valid @RequestBody UpdateSaldoRequest request
