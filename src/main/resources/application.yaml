@@ -24,3 +24,9 @@ spring:
     console:
       enabled: ${H2_CONSOLE_ENABLED:true}
       path: /h2-console
+
+springdoc:
+  enable-default-api-docs: false
+  swagger-ui:
+    url: /openapi.yaml
+    disable-swagger-default-url: true
