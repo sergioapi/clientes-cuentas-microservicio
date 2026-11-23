@@ -399,8 +399,16 @@ components:
       description: >-
         El formato solicitado en la cabecera Accept no está soportado.
         La operación no se ejecuta.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
 
     UnsupportedMediaType:
       description: >-
         El cuerpo de la petición debe enviarse con
         Content-Type application/json.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
